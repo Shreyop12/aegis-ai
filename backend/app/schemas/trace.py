@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -15,5 +16,5 @@ class TraceCreate(BaseModel):
     model_output: str | None = None
 
 class TraceCreated(BaseModel):
-    trace_id: str
+    trace_id: UUID
     status: Literal["accepted"]

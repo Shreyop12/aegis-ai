@@ -1,11 +1,11 @@
-from fastapi.testclient import TestClient
+from uuid import UUID
 
-from backend.app.main import app
+from sqlalchemy import select
 
-client = TestClient(app)
+from backend.app.models.trace import Trace
 
 
-def test_create_trace():
+def test_create_trace(client, db_session):
     payload = {
         "application": "support-agent",
         "environment": "production",
@@ -15,17 +15,31 @@ def test_create_trace():
         "model_output": "Yes, you can cancel your subscription.",
     }
 
+    # 1. Send the request to our API
     response = client.post("/v1/traces", json=payload)
 
+    # 2. Verify the API response
     assert response.status_code == 201
 
     body = response.json()
 
     assert body["status"] == "accepted"
-    assert "trace_id" in body
     assert body["trace_id"]
 
-def test_create_trace_rejects_invalid_environment():
+    # 3. Query PostgreSQL directly using the ID returned by the API
+    stored_trace = db_session.scalar(
+        select(Trace).where(
+            Trace.id == UUID(body["trace_id"])
+        )
+    )
+
+    # 4. Verify that the row really exists in PostgreSQL
+    assert stored_trace is not None
+    assert stored_trace.application == "support-agent"
+    assert stored_trace.environment == "production"
+    assert stored_trace.model == "test-model"
+
+def test_create_trace_rejects_invalid_environment(client):
     payload = {
         "application": "support-agent",
         "environment": "mars",
@@ -38,7 +52,7 @@ def test_create_trace_rejects_invalid_environment():
 
     assert response.status_code == 422
 
-def test_create_trace_rejects_empty_application():
+def test_create_trace_rejects_empty_application(client):
     payload = {
         "application": "",
         "environment": "production",
@@ -52,7 +66,7 @@ def test_create_trace_rejects_empty_application():
     assert response.status_code == 422
 
 
-def test_create_trace_rejects_missing_model():
+def test_create_trace_rejects_missing_model(client):
     payload = {
         "application": "support-agent",
         "environment": "production",
@@ -65,7 +79,7 @@ def test_create_trace_rejects_missing_model():
     assert response.status_code == 422
 
 
-def test_create_trace_allows_missing_model_output():
+def test_create_trace_allows_missing_model_output(client):
     payload = {
         "application": "support-agent",
         "environment": "production",
@@ -77,3 +91,4 @@ def test_create_trace_allows_missing_model_output():
     response = client.post("/v1/traces", json=payload)
 
     assert response.status_code == 201
+
