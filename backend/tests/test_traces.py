@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 
@@ -92,3 +92,49 @@ def test_create_trace_allows_missing_model_output(client):
 
     assert response.status_code == 201
 
+def test_get_trace(client):
+    payload = {
+        "application": "support-agent",
+        "environment": "production",
+        "model": "test-model",
+        "user_input": "Can I cancel my subscription?",
+        "prompt": "Answer according to company policy.",
+        "model_output": "Yes, you can cancel.",
+    }
+
+    create_response = client.post(
+        "/v1/traces",
+        json=payload,
+    )
+
+    assert create_response.status_code == 201
+
+    trace_id = create_response.json()["trace_id"]
+
+    get_response = client.get(
+        f"/v1/traces/{trace_id}"
+    )
+
+    assert get_response.status_code == 200
+
+    body = get_response.json()
+
+    assert body["trace_id"] == trace_id
+    assert body["application"] == "support-agent"
+    assert body["environment"] == "production"
+    assert body["model"] == "test-model"
+    assert body["user_input"] == "Can I cancel my subscription?"
+    assert body["model_output"] == "Yes, you can cancel."
+    assert body["created_at"]
+
+def test_get_trace_returns_404_when_not_found(client):
+    missing_trace_id = uuid4()
+
+    response = client.get(
+        f"/v1/traces/{missing_trace_id}"
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Trace not found"
+    }

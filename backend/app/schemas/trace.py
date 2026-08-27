@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -18,3 +19,13 @@ class TraceCreate(BaseModel):
 class TraceCreated(BaseModel):
     trace_id: UUID
     status: Literal["accepted"]
+
+class TraceRead(BaseModel):
+    trace_id: UUID
+    application: str
+    environment: str
+    model: str
+    user_input: str
+    prompt: str
+    model_output: str | None
+    created_at: datetime
