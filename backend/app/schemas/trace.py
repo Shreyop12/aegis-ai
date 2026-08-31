@@ -29,3 +29,16 @@ class TraceRead(BaseModel):
     prompt: str
     model_output: str | None
     created_at: datetime
+
+class TraceSummary(BaseModel):
+    trace_id: UUID
+    application: str
+    environment: str
+    model: str
+    created_at: datetime
+
+
+class TraceListResponse(BaseModel):
+    items: list[TraceSummary]
+    limit: int
+    offset: int
